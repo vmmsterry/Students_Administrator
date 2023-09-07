@@ -9,6 +9,7 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using API_Students.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace API_Students.Controllers
 {
@@ -18,14 +19,20 @@ namespace API_Students.Controllers
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly TokenValidationParameters _tokenValidationParameters;
 
         private readonly DB_Context _dbContext;
 
-        public AuthenticationController(UserManager<IdentityUser> userManager, IConfiguration configuration, DB_Context dbContext)
+        private readonly AuthHelper authHelper;
+
+        public AuthenticationController(UserManager<IdentityUser> userManager, IConfiguration configuration, DB_Context dbContext, TokenValidationParameters tokenValidationParameters)
         {
             _userManager = userManager;
             _configuration = configuration;
             _dbContext = dbContext;
+            _tokenValidationParameters = tokenValidationParameters;
+
+            authHelper = new AuthHelper();
         }
 
         [HttpPost]
@@ -38,7 +45,7 @@ namespace API_Students.Controllers
                 var userExist = await _userManager.FindByEmailAsync(registrationRequest.Email);
 
                 if (userExist != null)
-                    return BadRequest(AuthHelper.CreateAuthResult("Email already exist"));
+                    return BadRequest(authHelper.GetErrorResult("Email already exist"));
 
 
                 //Create user
@@ -57,10 +64,50 @@ namespace API_Students.Controllers
                     return Ok(jwtToken);
                 }
 
-                return BadRequest(AuthHelper.CreateAuthResult("Server error"));
+                return BadRequest(authHelper.GetErrorResult("Server error"));
             }
 
             return BadRequest();
+        }
+
+        [HttpPost]
+        [Route("Login")]
+        public async Task<IActionResult> Login([FromBody] UserLoginRequest userLogin)
+        {
+            if (ModelState.IsValid)
+            {
+                // User exist
+                var existingUser = await _userManager.FindByEmailAsync(userLogin.Email);
+                if(existingUser == null)
+                    return BadRequest(authHelper.GetErrorResult("User doesn't exist"));
+
+                // User is correct
+                var isCorrect = await _userManager.CheckPasswordAsync(existingUser, userLogin.Password);
+                if(!isCorrect)
+                    return BadRequest(authHelper.GetErrorResult("Invalid credentials"));
+
+                var jwtToken = await GenerateToken(existingUser);
+                return Ok(jwtToken);
+            }
+
+            return BadRequest();
+        }
+
+        [HttpPost]
+        [Route("RefreshToken")]
+        public async Task<IActionResult> RefreshToken([FromBody] TokenRequest tokenRequest)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await ValidateAndGenerateToken(tokenRequest);
+
+                if(result == null)
+                    return BadRequest(authHelper.GetErrorResult("Invalid parameters"));
+
+                return Ok(result);
+            }
+
+            return BadRequest(authHelper.GetErrorResult("Invalid parameters"));
         }
 
         /// <summary>
@@ -105,8 +152,61 @@ namespace API_Students.Controllers
             await _dbContext.refreshToken.AddAsync(refreshToken);
             await _dbContext.SaveChangesAsync();
 
-            return AuthHelper.CreateAuthResult(jwtToken, refreshToken.Token);
+            return authHelper.GetSuccessResult(jwtToken, refreshToken.Token);
         }
         
+
+        private async Task<AuthResult> ValidateAndGenerateToken(TokenRequest tokenRequest)
+        {
+            var jwtTokenHandler = new JwtSecurityTokenHandler();
+
+            try
+            {
+                _tokenValidationParameters.ValidateLifetime = false; // for testing - needs to be true 
+
+                var tokenInVerification = jwtTokenHandler.ValidateToken(tokenRequest.Token, _tokenValidationParameters, out var validatedToken);
+                if (validatedToken is JwtSecurityToken jwtSecurityToken) 
+                {
+                    var result = jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase);
+                    if (!result)
+                        return authHelper.GetErrorResult("Invalid token");
+                }
+
+                var utcExpiryDate = long.Parse(tokenInVerification.Claims.FirstOrDefault(x => x.Type.Equals(JwtRegisteredClaimNames.Exp)).Value);
+                var expiryDate = AuthHelper.UnixTimeStamToDateTime(utcExpiryDate);
+                if(expiryDate < DateTime.Now)
+                    return authHelper.GetErrorResult("Invalid token");
+
+                var storedToken = _dbContext.refreshToken.FirstOrDefault(x => x.Token == tokenRequest.RefreshToken);
+
+                if(storedToken == null)
+                    return authHelper.GetErrorResult("Invalid token");
+
+                if (storedToken.IsUsed)
+                    return authHelper.GetErrorResult("Invalid token");
+
+                if (storedToken.IsRevoked)
+                    return authHelper.GetErrorResult("Invalid token");
+
+                var jti = tokenInVerification.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+
+                if (storedToken.JwtId != jti)
+                    return authHelper.GetErrorResult("Invalid token");
+
+                if (storedToken.ExpiryDate < DateTime.Now)
+                    return authHelper.GetErrorResult("Expired token");
+
+                storedToken.IsUsed = true;
+                _dbContext.refreshToken.Update(storedToken);
+                _dbContext.SaveChanges();
+
+                var dbUser = await _userManager.FindByIdAsync(storedToken.UserId);
+                return await GenerateToken(dbUser);
+            }
+            catch
+            {
+                return authHelper.GetErrorResult("Server error");
+            }
+        }
     }
 }
