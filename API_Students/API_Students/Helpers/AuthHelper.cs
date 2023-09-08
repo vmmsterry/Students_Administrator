@@ -1,5 +1,6 @@
 ﻿using API_Students.Interfaces;
 using API_Students.Models;
+using System.Security.Cryptography;
 
 namespace API_Students.Helpers
 {
@@ -29,9 +30,10 @@ namespace API_Students.Helpers
 
         internal static string RandomStringGeneration(int length)
         {
-            var random = new Random();
-            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz_";
-            return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+            var randomGenerator = RandomNumberGenerator.Create();
+            byte[] data = new byte[length];
+            randomGenerator.GetBytes(data);
+            return BitConverter.ToString(data);
         }
 
         internal static DateTime UnixTimeStamToDateTime(long utcExpiryDate)
