@@ -5,8 +5,8 @@ namespace API_Students.Models.DTOs
     public class UserLoginRequest
     {
         [Required]
-        public string Email { get; set; }
+        public string? Email { get; set; }
         [Required]
-        public string Password { get; set; }
+        public string? Password { get; set; }
     }
 }

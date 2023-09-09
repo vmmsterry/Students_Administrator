@@ -149,7 +149,7 @@ namespace API_Students.Controllers
                 UserId = user.Id
             };
 
-            await _dbContext.refreshToken.AddAsync(refreshToken);
+            await _dbContext.RefreshToken.AddAsync(refreshToken);
             await _dbContext.SaveChangesAsync();
 
             return authHelper.GetSuccessResult(jwtToken, refreshToken.Token);
@@ -177,7 +177,7 @@ namespace API_Students.Controllers
                 if(expiryDate < DateTime.Now)
                     return authHelper.GetErrorResult("Invalid token");
 
-                var storedToken = _dbContext.refreshToken.FirstOrDefault(x => x.Token == tokenRequest.RefreshToken);
+                var storedToken = _dbContext.RefreshToken.FirstOrDefault(x => x.Token == tokenRequest.RefreshToken);
 
                 if(storedToken == null)
                     return authHelper.GetErrorResult("Invalid token");
@@ -197,7 +197,7 @@ namespace API_Students.Controllers
                     return authHelper.GetErrorResult("Expired token");
 
                 storedToken.IsUsed = true;
-                _dbContext.refreshToken.Update(storedToken);
+                _dbContext.RefreshToken.Update(storedToken);
                 _dbContext.SaveChanges();
 
                 var dbUser = await _userManager.FindByIdAsync(storedToken.UserId);
