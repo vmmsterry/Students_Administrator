@@ -43,7 +43,7 @@ namespace API_Students.Controllers
             {
                 // Validate if the user exist
                 var userExist = await _userManager.FindByEmailAsync(registrationRequest.Email);
-
+                
                 if (userExist != null)
                     return BadRequest(authHelper.GetErrorResult("Email already exist"));
 
@@ -177,7 +177,7 @@ namespace API_Students.Controllers
                 if(expiryDate < DateTime.Now)
                     return authHelper.GetErrorResult("Invalid token");
 
-                var storedToken = _dbContext.RefreshToken.FirstOrDefault(x => x.Token == tokenRequest.RefreshToken);
+                var storedToken = _dbContext.RefreshToken.First(x => x.Token == tokenRequest.RefreshToken);
 
                 if(storedToken == null)
                     return authHelper.GetErrorResult("Invalid token");

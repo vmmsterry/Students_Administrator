@@ -6,7 +6,7 @@ namespace API_Students.Infrastructure
 {
     public class DB_Context : IdentityDbContext
     {
-        public DbSet<RefreshToken> RefreshToken { get; set; }
+        public DbSet<RefreshToken> RefreshToken { get; set; } = null!;
 
         public DB_Context()
         {

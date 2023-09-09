@@ -38,9 +38,10 @@ namespace API_Students.Helpers
 
         internal static DateTime UnixTimeStamToDateTime(long utcExpiryDate)
         {
-            var dateTimeVal = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-            dateTimeVal = dateTimeVal.AddSeconds(utcExpiryDate).ToUniversalTime();
-            return dateTimeVal;
+            // Create a unix epoch time
+            var epochTime = DateTime.UnixEpoch;
+            epochTime = epochTime.AddSeconds(utcExpiryDate).ToUniversalTime();
+            return epochTime;
         }
     }
 }
