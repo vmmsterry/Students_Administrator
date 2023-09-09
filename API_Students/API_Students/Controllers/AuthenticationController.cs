@@ -171,8 +171,8 @@ namespace API_Students.Controllers
                     if (!result)
                         return authHelper.GetErrorResult("Invalid token");
                 }
-
-                var utcExpiryDate = long.Parse(tokenInVerification.Claims.FirstOrDefault(x => x.Type.Equals(JwtRegisteredClaimNames.Exp)).Value);
+                
+                var utcExpiryDate = long.Parse(tokenInVerification.Claims.First(x => x.Type.Equals(JwtRegisteredClaimNames.Exp)).Value);
                 var expiryDate = AuthHelper.UnixTimeStamToDateTime(utcExpiryDate);
                 if(expiryDate < DateTime.Now)
                     return authHelper.GetErrorResult("Invalid token");
@@ -188,7 +188,7 @@ namespace API_Students.Controllers
                 if (storedToken.IsRevoked)
                     return authHelper.GetErrorResult("Invalid token");
 
-                var jti = tokenInVerification.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+                var jti = tokenInVerification.Claims.First(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
 
                 if (storedToken.JwtId != jti)
                     return authHelper.GetErrorResult("Invalid token");
