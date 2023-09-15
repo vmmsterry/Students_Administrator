@@ -19,7 +19,7 @@ jobs:
           dotnet-version: '6.0.x'
   
       - name: Restore
-        run: sotnet restore ./API_Students/API_Students.sln
+        run: sotnet restore .\API_Students\API_Students.sln
   
       - name: Build
         run: dotnet build ./API_Students/API_Students.sln --configuration Release --no-restore
