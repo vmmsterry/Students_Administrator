@@ -1,57 +1,29 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy ASP.Net Core app to Azure Web App - DevStudentsAPI
+name: Publish
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - API-Creation
-  workflow_dispatch:
+    - API-Creation
 
 jobs:
-  build:
-    runs-on: windows-latest
+  publish:
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Set up .NET Core
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '6.0.x'
-          include-prerelease: true
-
-      - name: Build with dotnet
-        run: dotnet build .\API_Students --configuration Release
-
-      - name: dotnet publish
-        run: dotnet publish .\API_Students -c Release -o ${{env.DOTNET_ROOT}}/myapp
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v2
-        with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
-
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v2
-        with:
-          name: .net-app
-
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: 'DevStudentsAPI'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9128F87BD7714FF389AEB5D11A83A409 }}
-          package: .
+  
+      - name: Restore
+        run: sotnet restore ./API_Students/API_Students.sln
+  
+      - name: Build
+        run: dotnet build ./API_Students/API_Students.sln --configuration Release --no-restore
+  
+      - name: Publish
+        run: dotnet publish ./API_Students/API_Students.sln --configuration Release --no-restore
+    
