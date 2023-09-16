@@ -1,5 +1,8 @@
 using API_Students.Configurations;
 using API_Students.Infrastructure;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +13,17 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 ConfigurationManager configuration = builder.Configuration;
+
+//Azure Key Vault
+string kvURL = configuration["KeyVaultConfig:kvURL"];
+string tenantId = configuration["KeyVaultConfig:tenantId"];
+string clientId = configuration["KeyVaultConfig:clientId"];
+string clientSecret = configuration["KeyVaultConfig:clientSecret"];
+
+var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);  
+
+var client = new SecretClient(new Uri(kvURL), credential);
+configuration.AddAzureKeyVault(client, new AzureKeyVaultConfigurationOptions());
 
 // Add services to the container.
 
