@@ -1,10 +1,12 @@
-﻿using API_Students.Models;
+﻿using API_Students.Interfaces;
+using API_Students.Models;
+using System.Security.Cryptography;
 
 namespace API_Students.Helpers
 {
-    internal class AuthHelper
+    internal class AuthHelper: IAuthResult
     {
-        internal static AuthResult CreateAuthResult(string message)
+        public AuthResult GetErrorResult(string message)
         {
             return new AuthResult()
             {
@@ -16,7 +18,7 @@ namespace API_Students.Helpers
             };
         }
 
-        internal static AuthResult CreateAuthResult(string token, string refreshToken)
+        public AuthResult GetSuccessResult(string token, string refreshToken)
         {
             return new AuthResult()
             {
@@ -28,9 +30,18 @@ namespace API_Students.Helpers
 
         internal static string RandomStringGeneration(int length)
         {
-            var random = new Random();
-            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz_";
-            return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+            var randomGenerator = RandomNumberGenerator.Create();
+            byte[] data = new byte[length];
+            randomGenerator.GetBytes(data);
+            return BitConverter.ToString(data);
+        }
+
+        internal static DateTime UnixTimeStamToDateTime(long utcExpiryDate)
+        {
+            // Create a unix epoch time
+            var epochTime = DateTime.UnixEpoch;
+            epochTime = epochTime.AddSeconds(utcExpiryDate).ToUniversalTime();
+            return epochTime;
         }
     }
 }
